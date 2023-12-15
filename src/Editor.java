@@ -1,4 +1,11 @@
-import javax.swing.*;
+import javax.swing.JTextArea;
 
-class Editor extends JTextArea {
+public class Editor extends JTextArea {
+    public void highlightCharAt(int position) {
+        requestFocusInWindow();
+        if (getText().length() >= position) {
+            setSelectionStart(position);
+            setSelectionEnd(position + 1);
+        }
+    }
 }

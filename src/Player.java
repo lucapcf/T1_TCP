@@ -1,8 +1,14 @@
+import java.util.Arrays;
+import java.util.List;
 import javax.sound.midi.*;
 
 class Player {
     private static final int MIDI_VOLUME_CONTROL = 7;
-    private static final int NOTE_VELOCITY = 100;
+    private static final int NOTE_VELOCITY = 50;
+
+    private static final List<String> NOTES = Arrays.asList(
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+    );
 
     private MidiChannel channel;
 
@@ -18,13 +24,16 @@ class Player {
         reset();
     }
 
-    private static int noteId(int octave, char note) {
-        return 0;
+    private static int midiNote(int octave, String note) {
+        return ((octave + 1) * 12) + NOTES.indexOf(note);
     }
 
     public void reset() {
         setInstrument(0);
-        setVolume(100);
+    }
+
+    public int getInstrument() {
+        return channel.getProgram();
     }
 
     public void setInstrument(int instrument) {
@@ -39,11 +48,11 @@ class Player {
         channel.controlChange(MIDI_VOLUME_CONTROL, volume);
     }
 
-    public void noteOn(int octave, char note) {
-        channel.noteOn(noteId(octave, note), NOTE_VELOCITY);
+    public void noteOn(int octave, String note) {
+        channel.noteOn(midiNote(octave, note), NOTE_VELOCITY);
     }
 
-    public void noteOff(int octave, char note) {
-        channel.noteOff(noteId(octave, note));
+    public void noteOff(int octave, String note) {
+        channel.noteOff(midiNote(octave, note));
     }
 }

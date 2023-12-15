@@ -1,30 +1,56 @@
+import java.util.logging.Logger;
+
 class Parser {
+    private static final Logger LOGGER = Logger.getLogger(
+        Parser.class.getName()
+    );
+
     private static final int NOTE_DURATION_MS = 500;
+    private static final int PAUSE_DURATION_MS = 50;
+    private static final int DEFAULT_OCTAVE = 4;
+    private static final int MAX_OCTAVE = 9;
+
+    private enum Instrument {
+        HARPISCHORD(7),
+        TUBULAR_BELLS(15),
+        CHURCH_ORGAN(20),
+        PAN_FLUTE(76),
+        AGOGO(114);
+
+        private final int id;
+
+        Instrument(int value) {
+            id = value - 1;
+        }
+
+        public int getId() {
+            return id;
+        }
+    }
 
     private String text;
-    private int position;
+    private int position = 0;
 
-    private boolean quit;
-    private boolean pause;
+    private boolean quit = false;
+    private boolean pause = true;
+    private boolean paused = true;
 
-    private App app;
-    private Player player;
-    private int octave;
-    private Character lastNote;
+    private final App app;
+    private final Player player;
+    private final int defaultVolume;
+    private int octave = DEFAULT_OCTAVE;
+    private Character lastNote = null;
 
-    public Parser(App app, Player player) {
-        quit = false;
-        pause = true;
+    public Parser(App app, Player player, int defaultVolume) {
         this.app = app;
         this.player = player;
+        this.defaultVolume = defaultVolume;
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (!quit) {
-                    while (!pause) {
-                        playCommand();
-                    }
+                    playLoop();
                     try {
                         synchronized (Parser.this) {
                             Parser.this.wait();
@@ -41,9 +67,9 @@ class Parser {
 
     public void reset() {
         pause();
-        position = 0;
         lastNote = null;
-        octave = 0;
+        position = 0;
+        octave = DEFAULT_OCTAVE;
         player.reset();
     }
 
@@ -63,52 +89,96 @@ class Parser {
         return c;
     }
 
-    private boolean startCommand(char command) {
-        boolean wait = false;
-        if (isNote(command)) {
-            player.noteOn(octave, command);
-            wait = true;
-        } else if (command == ' ') {
-            // etc.
-        } else if (false) {
-            // etc.
+    private int startCommand(char c) {
+        int wait = 0;
+        if (isNote(c)) {
+            player.noteOn(octave, Character.toString(c));
+            wait = NOTE_DURATION_MS;
+        } else if (c == ' ') {
+            doubleOrResetVolume();
+        } else if (c == '!') {
+            player.setInstrument(Instrument.AGOGO.getId());
+        } else if ("IOUiou".indexOf(c) != -1) {
+            player.setInstrument(Instrument.HARPISCHORD.getId());
+        } else if (Character.isDigit(c)) {
+            int instrument = player.getInstrument();
+            instrument += Character.getNumericValue(c);
+            instrument %= 128;
+            player.setInstrument(instrument);
+        } else if (c == '?' || c == '.') {
+            int newOctave = octave + 1;
+            if (newOctave > MAX_OCTAVE) {
+                newOctave = DEFAULT_OCTAVE;
+            }
+            octave = newOctave;
+        } else if (c == '\n') {
+            player.setInstrument(Instrument.TUBULAR_BELLS.getId());
+        } else if (c == ';') {
+            player.setInstrument(Instrument.PAN_FLUTE.getId());
+        } else if (c == ',') {
+            player.setInstrument(Instrument.CHURCH_ORGAN.getId());
         } else {
             if (lastNote != null) {
-                player.noteOn(octave, lastNote);
+                player.noteOn(octave, Character.toString(lastNote));
+                wait = NOTE_DURATION_MS;
+            } else {
+                wait = PAUSE_DURATION_MS;
             }
-            wait = true;
         }
         return wait;
     }
 
-    private void finishCommand(char command) {
-        if (isNote(command)) {
-            player.noteOff(octave, command);
-            lastNote = command;
+    private void finishCommand(char c) {
+        if (isNote(c)) {
+            player.noteOff(octave, Character.toString(c));
+            lastNote = c;
         } else {
             if (lastNote != null) {
-                player.noteOff(octave, lastNote);
+                player.noteOff(octave, Character.toString(lastNote));
             }
             lastNote = null;
         }
     }
 
-    private void playCommand() {
-        Character command = nextCommand();
-        if (command == null) {
-            // Fim.
-            app.stop();
-        } else {
-            app.updateEditorPosition(position);
-            Boolean shouldWait = startCommand(command);
-            if (shouldWait) {
-                try {
-                    synchronized (this) {
-                        wait(NOTE_DURATION_MS);
+    private void playLoop() {
+        boolean finished = false;
+        paused = false;
+        while (!pause && !finished) {
+            Character command = nextCommand();
+            if (command == null) {
+                // Fim.
+                finished = true;
+            } else {
+                int wait = startCommand(command);
+                if (wait != 0) {
+                    long tEnd = System.currentTimeMillis() + wait;
+                    while (!pause && System.currentTimeMillis() < tEnd) {
+                        try {
+                            synchronized (this) {
+                                wait(tEnd - System.currentTimeMillis());
+                            }
+                        } catch (InterruptedException e) {
+                        }
                     }
-                } catch (InterruptedException e) {}
+                }
+                finishCommand(command);
+                app.updateEditorPosition(position);
             }
-            finishCommand(command);
+        }
+        paused = true;
+        synchronized (this) {
+            notify();
+        }
+        if (finished) {
+            app.stop();
+        }
+    }
+
+    private void doubleOrResetVolume() {
+        int newVolume = player.getVolume() * 2;
+        player.setVolume(newVolume);
+        if (player.getVolume() != newVolume) {
+            player.setVolume(defaultVolume);
         }
     }
 
@@ -124,13 +194,21 @@ class Parser {
         synchronized (this) {
             notify();
         }
+        while (pause && !paused) {
+            synchronized (this) {
+                notify();
+            }
+            try {
+                synchronized (this) {
+                    wait();
+                }
+            } catch (InterruptedException e) {
+            }
+        }
     }
 
     public void quit() {
         quit = true;
-        pause = true;
-        synchronized (this) {
-            notify();
-        }
+        pause();
     }
 }

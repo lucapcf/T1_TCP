@@ -2,14 +2,16 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-class App {
-    Player player;
-    Parser parser;
+public class App {
+    private final Player player;
+    private final Parser parser;
 
-    Editor editor;
-    JButton playButton;
-    Boolean stopped = true;
-    Boolean paused = true;
+    private final Editor editor;
+    private final JButton playButton;
+    private final JButton stopButton;
+
+    private boolean stopped = true;
+    private boolean paused = true;
 
     public static void main(String args[]) {
         App app = new App();
@@ -17,7 +19,7 @@ class App {
 
     public App() {
         player = new Player();
-        parser = new Parser(this, player);
+        parser = new Parser(this, player, player.getVolume());
 
         JFrame frame = new JFrame("App");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -25,7 +27,7 @@ class App {
 
         editor = new Editor();
 
-        JButton stopButton = new JButton("Stop");
+        stopButton = new JButton("Stop");
         stopButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -51,7 +53,7 @@ class App {
         frame.setVisible(true);
     }
 
-    private void setStopped(Boolean stopped) {
+    private void setStopped(boolean stopped) {
         if (stopped) {
             parser.reset();
             setPaused(true);
@@ -63,7 +65,7 @@ class App {
         this.stopped = stopped;
     }
 
-    private void setPaused(Boolean paused) {
+    private void setPaused(boolean paused) {
         if (paused) {
             playButton.setText("Play");
             parser.pause();
@@ -84,8 +86,7 @@ class App {
     }
 
     public void updateEditorPosition(int position) {
-        editor.requestFocusInWindow();
-        editor.setCaretPosition(position);
+        editor.highlightCharAt(position);
     }
 
     public void updateVolume() {
