@@ -19,6 +19,7 @@ public class App {
     private final JButton stopButton;
     private final JButton openfileButton;
     private final JButton savefileButton;
+    private final JButton savemidiButton;
 
     private boolean stopped = true;
     private boolean paused = true;
@@ -61,11 +62,19 @@ public class App {
             }
         });
 
-        savefileButton = new JButton("save file");
+        savefileButton = new JButton("save as txt");
         savefileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                savefile();
+                savetxt();
+            }
+        });
+
+        savemidiButton = new JButton("save as MIDI");
+        savemidiButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                savemidi();
             }
         });
 
@@ -73,11 +82,15 @@ public class App {
         JPanel bottomPanel = new JPanel();
         bottomPanel.add(stopButton);
         bottomPanel.add(playButton);
-        bottomPanel.add(openfileButton);
-        bottomPanel.add(savefileButton);
 
+        JPanel topPanel = new JPanel();
+        topPanel.add(openfileButton);
+        topPanel.add(savefileButton);
+        topPanel.add(savemidiButton);
+        
         frame.getContentPane().add(BorderLayout.CENTER, editor);
         frame.getContentPane().add(BorderLayout.SOUTH, bottomPanel);
+        frame.getContentPane().add(BorderLayout.NORTH, topPanel);
 
         frame.setVisible(true);
     }
@@ -159,7 +172,7 @@ public class App {
 	}
     
 //tentando fazer o save file
-    public void savefile() {
+    public void savetxt() {
 		JFileChooser fileChooser = new JFileChooser();
         //coloquei para abrir direto no proprio diretorio
 		fileChooser.setCurrentDirectory(new File(".")); 
@@ -182,5 +195,23 @@ public class App {
         }
     }
 
+     public void savemidi() {
+		JFileChooser fileChooser = new JFileChooser();
+        //coloquei para abrir direto no proprio diretorio
+		fileChooser.setCurrentDirectory(new File(".")); 
+		int response = fileChooser.showSaveDialog(null);
+			
+		if(response == JFileChooser.APPROVE_OPTION){
+            File file = fileChooser.getSelectedFile();
+            //adicionando .midi 
+            if (!file.getName().endsWith(".midi")){
+                file = new File(file.getAbsolutePath() + ".midi");
+            }
+            
+        }
+    }
+
 }
+
+
 
