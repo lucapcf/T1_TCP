@@ -2,14 +2,13 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
 import java.io.BufferedReader;
 //Emerson mexendo
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-//
+
 public class App {
     private final Player player;
     private final Parser parser;
@@ -17,9 +16,6 @@ public class App {
     private final Editor editor;
     private final JButton playButton;
     private final JButton stopButton;
-    private final JButton openfileButton;
-    private final JButton savefileButton;
-    private final JButton savemidiButton;
 
     private boolean stopped = true;
     private boolean paused = true;
@@ -34,7 +30,7 @@ public class App {
 
         JFrame frame = new JFrame("App");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
+        frame.setSize(800, 600); 
 
         editor = new Editor();
 
@@ -53,45 +49,47 @@ public class App {
                 playPause();
             }
         });
-        
-        openfileButton = new JButton("open file");
-        openfileButton.addActionListener(new ActionListener() {
+
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.add(stopButton);
+        bottomPanel.add(playButton);
+
+        //menu de arquivos e deixando tudo visivel no app
+        JMenuBar menubar = new JMenuBar();
+        JMenu filemenu = new JMenu("File");
+        JMenuItem openmenu = new JMenuItem("Open");
+        JMenuItem savetxtmenu = new JMenuItem("Save .txt");
+        JMenuItem savemidimenu = new JMenuItem("Save .midi");
+
+        openmenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 openfile();
             }
         });
 
-        savefileButton = new JButton("save as txt");
-        savefileButton.addActionListener(new ActionListener() {
+        savetxtmenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 savetxt();
             }
         });
 
-        savemidiButton = new JButton("save as MIDI");
-        savemidiButton.addActionListener(new ActionListener() {
+        savemidimenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 savemidi();
             }
         });
 
+        filemenu.add(openmenu);
+        filemenu.add(savetxtmenu);
+        filemenu.add(savemidimenu);
+        menubar.add(filemenu);
 
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(stopButton);
-        bottomPanel.add(playButton);
-
-        JPanel topPanel = new JPanel();
-        topPanel.add(openfileButton);
-        topPanel.add(savefileButton);
-        topPanel.add(savemidiButton);
-        
+        frame.setJMenuBar(menubar);
         frame.getContentPane().add(BorderLayout.CENTER, editor);
         frame.getContentPane().add(BorderLayout.SOUTH, bottomPanel);
-        frame.getContentPane().add(BorderLayout.NORTH, topPanel);
-
         frame.setVisible(true);
     }
 
@@ -143,7 +141,6 @@ public class App {
         //para pegar somente .txt(Não sei se sera permitido outros arquivos de texto)
         FileNameExtensionFilter formato = new FileNameExtensionFilter("Arquivos de texto", "txt");
         fileChooser.setFileFilter(formato);
-		//	
 		int response = fileChooser.showOpenDialog(null);
 			
 		if(response == JFileChooser.APPROVE_OPTION) {
@@ -159,9 +156,7 @@ public class App {
                 while ((line = bufferedReader.readLine()) != null) {
                     content.append(line).append("\n");
                 }
-                //
                 editor.setText(content.toString());
-                //
                 bufferedReader.close();
                 fileReader.close();
             } catch (IOException e) {
@@ -207,11 +202,8 @@ public class App {
             if (!file.getName().endsWith(".midi")){
                 file = new File(file.getAbsolutePath() + ".midi");
             }
-            
+            //Salvando o arquivo midi chamando a função feita em player
         }
     }
 
 }
-
-
-
