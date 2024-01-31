@@ -221,8 +221,19 @@ public class App {
         // Cria um seletor de arquivos
         JFileChooser fileChooser = new JFileChooser();
 
-        // Abre no diretório atual
-        fileChooser.setCurrentDirectory(new File("."));
+        String nomeDiretorio = "MeusArquivosTexto";
+
+        File diretorioAtual = new File(".").getAbsoluteFile();
+        File diretorioNovo = diretorioAtual.getParentFile().getParentFile();
+        File novoDiretorio = new File(diretorioNovo, nomeDiretorio);
+
+        // Verifica e cria o diretório se ele não existir
+        if (!novoDiretorio.exists()) {
+            novoDiretorio.mkdirs();
+        }
+
+        // Define o novo diretório como o diretório inicial do fileChooser
+        fileChooser.setCurrentDirectory(novoDiretorio);
 
         // Exibe a janela para salvar arquivo e armazena a resposta do usuário
         int response = fileChooser.showSaveDialog(null);
