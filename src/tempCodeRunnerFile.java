@@ -15,7 +15,6 @@ import javax.swing.event.ChangeListener;
 public class App {
     private final Player player;
     private final Parser parser;
-    private final AbstractParser abstractParser;
     private final Editor editor;
     private final JButton playButton;
     private final JButton stopButton;
@@ -32,7 +31,6 @@ public class App {
         player = new Player();
         parser = new Parser(this, player, player.getVolume());
         editor = new Editor();
-        abstractParser = new AbstractParser(this, player, player.getVolume(), editor);
 
         // Configuração da janela principal da aplicação
         JFrame frame = new JFrame("App");
@@ -109,7 +107,7 @@ public class App {
         savemidimenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                abstractParser.saveToMidiFile(editor.getText());
+                player.saveMidi(editor);
             }
         });
 
