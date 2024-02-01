@@ -1,214 +1,199 @@
-import java.util.logging.Logger;
-
 class Parser {
-    private static final Logger LOGGER = Logger.getLogger(
-        Parser.class.getName()
-    );
+    private static final int INSTRUMENT_PHONE = 124;
 
-    private static final int NOTE_DURATION_MS = 500;
-    private static final int PAUSE_DURATION_MS = 50;
-    private static final int DEFAULT_OCTAVE = 4;
-    private static final int MAX_OCTAVE = 9;
+    public abstract class Command {
+        public final int startpos;
+        public final int endpos;
 
-    private enum Instrument {
-        HARPISCHORD(7),
-        TUBULAR_BELLS(15),
-        CHURCH_ORGAN(20),
-        PAN_FLUTE(76),
-        AGOGO(114);
-
-        private final int id;
-
-        Instrument(int value) {
-            id = value - 1;
-        }
-
-        public int getId() {
-            return id;
+        public Command(int startpos, int endpos) {
+            this.startpos = startpos;
+            this.endpos = endpos;
         }
     }
 
-    private String text;
+    public class NoteCommand extends Command {
+        public final String note;
+
+        public NoteCommand(int startpos, int endpos, String note) {
+            super(startpos, endpos);
+            this.note = note;
+        }
+    }
+
+    public class InstrumentCommand extends Command {
+        public final int instrument;
+
+        public InstrumentCommand(int startpos, int endpos, int instrument) {
+            super(startpos, endpos);
+            this.instrument = instrument;
+        }
+    }
+
+    public abstract class DeltaCommand extends Command {
+        public final int delta;
+
+        public DeltaCommand(int startpos, int endpos, int delta) {
+            super(startpos, endpos);
+            this.delta = delta;
+        }
+    }
+
+    public class VolumeCommand extends DeltaCommand {
+        public VolumeCommand(int startpos, int endpos, int delta) {
+            super(startpos, endpos, delta);
+        }
+    }
+
+    public class OctaveCommand extends DeltaCommand {
+        public OctaveCommand(int startpos, int endpos, int delta) {
+            super(startpos, endpos, delta);
+        }
+    }
+
+    public class BpmCommand extends DeltaCommand {
+        public BpmCommand(int startpos, int endpos, int delta) {
+            super(startpos, endpos, delta);
+        }
+    }
+
+    public class PauseCommand extends Command {
+        public PauseCommand(int startpos, int endpos) {
+            super(startpos, endpos);
+        }
+    }
+
+    public class PhoneCommand extends Command {
+        public PhoneCommand(int startpos, int endpos) {
+            super(startpos, endpos);
+        }
+    }
+
+    public class RandomCommand extends Command {
+        public RandomCommand(int startpos, int endpos) {
+            super(startpos, endpos);
+        }
+    }
+
+    public class BpmRandomCommand extends Command {
+        public BpmRandomCommand(int startpos, int endpos) {
+            super(startpos, endpos);
+        }
+    }
+
+    public class NopCommand extends Command {
+        public NopCommand(int startpos, int endpos) {
+            super(startpos, endpos);
+        }
+    }
+
+    private final String text;
     private int position = 0;
 
-    private boolean quit = false;
-    private boolean pause = true;
-    private boolean paused = true;
+    private String lastNote = null;
 
-    private final App app;
-    private final Player player;
-    private final int defaultVolume;
-    private int octave = DEFAULT_OCTAVE;
-    private Character lastNote = null;
-
-    public Parser(App app, Player player, int defaultVolume) {
-        this.app = app;
-        this.player = player;
-        this.defaultVolume = defaultVolume;
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!quit) {
-                    playLoop();
-                    try {
-                        synchronized (Parser.this) {
-                            Parser.this.wait();
-                        }
-                    } catch (InterruptedException e) {}
-                }
-            }
-        }).start();
-    }
-
-    private static boolean isNote(char command) {
-        return ('A' <= command) && (command <= 'G');
-    }
-
-    public void reset() {
-        pause();
-        lastNote = null;
-        position = 0;
-        octave = DEFAULT_OCTAVE;
-        player.reset();
-    }
-
-    public void setTextAndReset(String text) {
-        reset();
+    public Parser(String text) {
         this.text = text;
     }
 
-    private Character nextCommand() {
+    private Character getChar() {
         Character c;
         if (position < text.length()) {
             c = text.charAt(position);
-            position += 1;
         } else {
             c = null;
         }
+        position += 1;
         return c;
     }
 
-    private int startCommand(char c) {
-        int wait = 0;
-        if (isNote(c)) {
-            player.noteOn(octave, Character.toString(c));
-            wait = NOTE_DURATION_MS;
+    private void rewind(int n) {
+        if (position >= n) {
+            position -= n;
+        }
+    }
+
+    public Command nextCommand() {
+        Command cmd = null;
+        int startpos = position;
+        Character c = getChar();
+
+        if (c == null) {
+            rewind(1);
+            return null;
+        }
+
+        if ("IOU".indexOf(Character.toUpperCase(c)) != -1) {
+            if (lastNote != null) {
+                cmd = new NoteCommand(startpos, position, lastNote);
+                lastNote = null;
+            } else {
+                cmd = new RandomCommand(startpos, position);
+                return cmd;
+            }
+        }
+
+        lastNote = null;
+
+        if (c == 'B') {
+            Character[] a1 = {'B', 'P', 'M', '+'};
+            Character[] a2 = {c, getChar(), getChar(), getChar()};
+            if (a1.equals(a2)) {
+                cmd = new BpmCommand(startpos, position, 80);
+                return cmd;
+            } else {
+                rewind(3);
+            }
+        }
+
+        if (c == 'R') {
+            Character delta = getChar();
+            if (delta == '+') {
+                cmd = new OctaveCommand(startpos, position, 1);
+                return cmd;
+            } else if (delta == '-') {
+                cmd = new OctaveCommand(startpos, position, -1);
+                return cmd;
+            } else {
+                rewind(1);
+            }
+        }
+
+        System.out.println(c);
+
+        if ("ABCDEFG".indexOf(Character.toUpperCase(c)) != -1) {
+            String note = Character.toString(Character.toUpperCase(c));
+            cmd = new NoteCommand(startpos, position, note);
+            lastNote = note;
         } else if (c == ' ') {
-            doubleOrResetVolume();
-        } else if (c == '!') {
-            player.setInstrument(Instrument.AGOGO.getId());
-        } else if ("IOUiou".indexOf(c) != -1) {
-            player.setInstrument(Instrument.HARPISCHORD.getId());
-        } else if (Character.isDigit(c)) {
-            int instrument = player.getInstrument();
-            instrument += Character.getNumericValue(c);
-            instrument %= 128;
-            player.setInstrument(instrument);
-        } else if (c == '?' || c == '.') {
-            int newOctave = octave + 1;
-            if (newOctave > MAX_OCTAVE) {
-                newOctave = DEFAULT_OCTAVE;
+            cmd = new PauseCommand(startpos, position);
+        } else if (c == '+' || c == '-') {
+            if (c == '+') {
+                cmd = new VolumeCommand(startpos, position, 1);
+            } else if (c == '-') {
+                cmd = new VolumeCommand(startpos, position, -1);
             }
-            octave = newOctave;
-        } else if (c == '\n') {
-            player.setInstrument(Instrument.TUBULAR_BELLS.getId());
+        } else if (c == '?') {
+            cmd = new RandomCommand(startpos, position);
         } else if (c == ';') {
-            player.setInstrument(Instrument.PAN_FLUTE.getId());
-        } else if (c == ',') {
-            player.setInstrument(Instrument.CHURCH_ORGAN.getId());
-        } else {
-            if (lastNote != null) {
-                player.noteOn(octave, Character.toString(lastNote));
-                wait = NOTE_DURATION_MS;
+            cmd = new BpmRandomCommand(startpos, position);
+        } else if (c == '\n') {
+            StringBuilder sb = new StringBuilder();
+            Character d = getChar();
+            while (d != null && Character.isDigit(d)) {
+                sb.append(d);
+            }
+            String s = sb.toString();
+            int instrument;
+            if (s.isEmpty()) {
+                instrument = 0;
             } else {
-                wait = PAUSE_DURATION_MS;
+                instrument = Integer.parseInt(s);
             }
-        }
-        return wait;
-    }
-
-    private void finishCommand(char c) {
-        if (isNote(c)) {
-            player.noteOff(octave, Character.toString(c));
-            lastNote = c;
+            cmd = new InstrumentCommand(startpos, position, instrument);
         } else {
-            if (lastNote != null) {
-                player.noteOff(octave, Character.toString(lastNote));
-            }
-            lastNote = null;
+            cmd = new NopCommand(startpos, position);
         }
-    }
 
-    private void playLoop() {
-        boolean finished = false;
-        paused = false;
-        while (!pause && !finished) {
-            Character command = nextCommand();
-            if (command == null) {
-                // Fim.
-                finished = true;
-            } else {
-                int wait = startCommand(command);
-                if (wait != 0) {
-                    long tEnd = System.currentTimeMillis() + wait;
-                    while (!pause && System.currentTimeMillis() < tEnd) {
-                        try {
-                            synchronized (this) {
-                                wait(tEnd - System.currentTimeMillis());
-                            }
-                        } catch (InterruptedException e) {
-                        }
-                    }
-                }
-                finishCommand(command);
-                app.updateEditorPosition(position);
-            }
-        }
-        paused = true;
-        synchronized (this) {
-            notify();
-        }
-        if (finished) {
-            app.stop();
-        }
-    }
-
-    private void doubleOrResetVolume() {
-        int newVolume = player.getVolume() * 2;
-        player.setVolume(newVolume);
-        if (player.getVolume() != newVolume) {
-            player.setVolume(defaultVolume);
-        }
-    }
-
-    public void play() {
-        pause = false;
-        synchronized (this) {
-            notify();
-        }
-    }
-
-    public void pause() {
-        pause = true;
-        synchronized (this) {
-            notify();
-        }
-        while (pause && !paused) {
-            synchronized (this) {
-                notify();
-            }
-            try {
-                synchronized (this) {
-                    wait();
-                }
-            } catch (InterruptedException e) {
-            }
-        }
-    }
-
-    public void quit() {
-        quit = true;
-        pause();
+        return cmd;
     }
 }
