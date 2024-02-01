@@ -1,60 +1,93 @@
-import java.io.File;
-import java.io.IOException;
-import java.util.logging.Logger;
+import java.io.*;
 import javax.sound.midi.*;
 
-class MidiWriter extends Player {
-    private static final int NOTE_VELOCITY = 50;
+class MidiWriter extends BaseMidiPlayer {
     private static final int PPQ = 24;
 
+    private int ticks = 0;
+    private int instrument = 0;
+    private int volume = 100;
     private Sequence sequence;
     private Track track;
 
-    public MidiWriter() {
-        sequence = new Sequence(Sequence.PPQ, PPQ)
-        track = sequence.createTrack();
-    }
-
-    // Verifica se um caractere é uma nota musical válida
-    private static boolean isNote(char command) {
-        return ('A' <= command) && (command <= 'G');
-    }
-
-    // Reseta o Parser para o estado inicial
-    public void reset() {
-        pause();
-        lastNote = null;
-        position = 0;
-        octave = DEFAULT_OCTAVE;
-        player.reset();
-    }
-
-    // Define o texto a ser interpretado e reseta o Parser
-    public void setTextAndReset(String text) {
-        reset();
-        this.text = text;
-    }
-
     public void writeFile(String text, File file) {
-        Sequence sequence = new Sequence(Sequence.PPQ, PPQ);
-        Track track = sequence.createTrack();
+        reset(text);
 
-        ShortMessage onMessage = new ShortMessage();
-        onMessage.setMessage(ShortMessage.NOTE_ON, 0, note, NOTE_VELOCITY);
-        track.add(new MidiEvent(onMessage, startTick));
+        try {
+            sequence = new Sequence(Sequence.PPQ, PPQ);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+            return;
+        }
+        track = sequence.createTrack();
 
-        ShortMessage offMessage = new ShortMessage();
-        offMessage.setMessage(ShortMessage.NOTE_OFF, 0, note, 0);
-        track.add(new MidiEvent(offMessage, startTick + durationTicks));
+        setVolume(volume);
 
-        int wait = startCommand(cmd);
-        finishCommand(cmd);
+        Parser.Command cmd;
+        while ((cmd = nextCommand()) != null) {
+            int wait = startCommand(cmd);
+            ticks += wait / PPQ;
+            finishCommand(cmd);
+        }
+
+        try {
+            MidiSystem.write(sequence, 0, file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public int getVolume() {
-        return 100;
+        return volume;
     }
 
     public void setVolume(int volume) {
+        ShortMessage message = new ShortMessage();
+        try {
+            message.setMessage(ShortMessage.CONTROL_CHANGE, 0, MIDI_VOLUME_CONTROL, volume);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+            return;
+        }
+        track.add(new MidiEvent(message, ticks));
+        this.volume = volume;
+    }
+
+    protected void noteOn(int octave, String note) {
+        ShortMessage message = new ShortMessage();
+        try {
+            message.setMessage(ShortMessage.NOTE_ON, 0, midiNote(octave, note), NOTE_VELOCITY);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+            return;
+        }
+        track.add(new MidiEvent(message, ticks));
+    }
+
+    protected void noteOff(int octave, String note) {
+        ShortMessage message = new ShortMessage();
+        try {
+            message.setMessage(ShortMessage.NOTE_OFF, 0, midiNote(octave, note), 0);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+            return;
+        }
+        track.add(new MidiEvent(message, ticks));
+    }
+
+    protected int getInstrument() {
+        return instrument;
+    }
+
+    protected void setInstrument(int instrument) {
+        ShortMessage message = new ShortMessage();
+        try {
+            message.setMessage(ShortMessage.PROGRAM_CHANGE, 0, instrument, 0);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+            return;
+        }
+        track.add(new MidiEvent(message, ticks));
+        this.instrument = instrument;
     }
 }

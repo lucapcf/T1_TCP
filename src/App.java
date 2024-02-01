@@ -205,17 +205,12 @@ public class App {
 
         int response = fileChooser.showSaveDialog(null);
         if (response == JFileChooser.APPROVE_OPTION) {
-            try {
-                File file = fileChooser.getSelectedFile();
-                if (!file.getName().endsWith(".midi")) {
-                    file = new File(file.getAbsolutePath() + ".midi");
-                }
-                FileWriter writer = new FileWriter(file);
-                writer.write(editor.getText());
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            File file = fileChooser.getSelectedFile();
+            if (!file.getName().endsWith(".midi")) {
+                file = new File(file.getAbsolutePath() + ".midi");
             }
+            MidiWriter writer = new MidiWriter();
+            writer.writeFile(editor.getText(), file);
         }
     }
 }

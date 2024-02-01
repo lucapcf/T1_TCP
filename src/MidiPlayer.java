@@ -1,15 +1,6 @@
-import java.util.Arrays;
-import java.util.List;
 import javax.sound.midi.*;
 
-class MidiPlayer extends Player {
-    private static final int MIDI_VOLUME_CONTROL = 7;
-    private static final int NOTE_VELOCITY = 50;
-
-    private static final List<String> NOTES = Arrays.asList(
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-    );
-
+class MidiPlayer extends BaseMidiPlayer {
     private MidiChannel channel;
 
     public MidiPlayer() {
@@ -27,10 +18,6 @@ class MidiPlayer extends Player {
     public void reset(String text) {
         super.reset(text);
         setInstrument(0);
-    }
-
-    private static int midiNote(int octave, String note) {
-        return ((octave + 1) * 12) + NOTES.indexOf(note);
     }
 
     public int getVolume() {

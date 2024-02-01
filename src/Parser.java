@@ -158,8 +158,6 @@ class Parser {
             }
         }
 
-        System.out.println(c);
-
         if ("ABCDEFG".indexOf(Character.toUpperCase(c)) != -1) {
             String note = Character.toString(Character.toUpperCase(c));
             cmd = new NoteCommand(startpos, position, note);
