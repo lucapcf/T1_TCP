@@ -231,18 +231,19 @@ class AbstractParser {
         // Cria um seletor de arquivos
         JFileChooser fileChooser = new JFileChooser();
 
-        String nomeDiretorio = "MeusArquivosMidi";
+        String nomeDiretorio = "Meus Arquivos Midi";
 
+        // Acessa diretório de salvamento
         File diretorioAtual = new File(".").getAbsoluteFile();
         File diretorioNovo = diretorioAtual.getParentFile().getParentFile();
         File novoDiretorio = new File(diretorioNovo, nomeDiretorio);
 
-        // Verifica e cria o diretório se ele não existir
+        // Cria o diretório se ele não existir
         if (!novoDiretorio.exists()) {
             novoDiretorio.mkdirs();
         }
 
-        // Define o novo diretório como o diretório inicial do fileChooser
+        // Define o novo diretório como o diretório atual
         fileChooser.setCurrentDirectory(novoDiretorio);
 
         // Exibe a janela para salvar arquivo e armazena a resposta do usuário
@@ -260,32 +261,32 @@ class AbstractParser {
                 if (!midiFile.getName().endsWith(".midi")) {
                     midiFile = new File(midiFile.getAbsolutePath() + ".midi");
                 }
+
+            // Tenta criar a sequência MIDI e escrevê-la no arquivo
+            try {
+                // Cria uma nova sequência MIDI com resolução PPQ
+                Sequence sequence = new Sequence(Sequence.PPQ, PPQ);
+                // Cria uma trilha na sequência
+                Track track = sequence.createTrack();
+
+                // Define o texto a ser convertido em música MIDI e inicializa variáveis usadas
+                this.text = textoEditor;
+                this.position = 0;
+                this.octave = DEFAULT_OCTAVE;
+                int ticks = 0;
+
+                // Processa o texto caractere a caractere adicionando eventos MIDI à trilha
+                Character command;
+                while ((command = nextCommand()) != null) {
+                    int durationTicks = processCommand(command, track, ticks);
+                    ticks += durationTicks;
+                }
+
+                // Escreve a sequência MIDI no arquivo selecionado
+                MidiSystem.write(sequence, 1, midiFile);
+            } catch (InvalidMidiDataException | IOException e) {
+                e.printStackTrace();
             }
-
-        // Tenta criar a sequência MIDI e escrevê-la no arquivo
-        try {
-            // Cria uma nova sequência MIDI com resolução PPQ
-            Sequence sequence = new Sequence(Sequence.PPQ, PPQ);
-            // Cria uma trilha na sequência
-            Track track = sequence.createTrack();
-
-            // Define o texto a ser convertido em música MIDI e inicializa variáveis usadas
-            this.text = textoEditor;
-            this.position = 0;
-            this.octave = DEFAULT_OCTAVE;
-            int ticks = 0;
-
-            // Processa o texto caractere a caractere adicionando eventos MIDI à trilha
-            Character command;
-            while ((command = nextCommand()) != null) {
-                int durationTicks = processCommand(command, track, ticks);
-                ticks += durationTicks;
-            }
-
-            // Escreve a sequência MIDI no arquivo selecionado
-            MidiSystem.write(sequence, 1, midiFile);
-        } catch (InvalidMidiDataException | IOException e) {
-            e.printStackTrace();
         }
     }
 
