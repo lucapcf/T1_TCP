@@ -96,44 +96,44 @@ class Parser {
 
     // Obtém o próximo caractere do texto
     private Character nextCommand() {
-        Character c;
+        Character caractere;
         if (position < text.length()) {
-            c = text.charAt(position);
+            caractere = text.charAt(position);
             position += 1;
         } else {
-            c = null;
+            caractere = null;
         }
-        return c;
+        return caractere;
     }
 
     // Inicia um comando de acordo com o caractere fornecido
-    private int startCommand(char c) {
+    private int startCommand(char caractere) {
         int wait = 0;
-        if (isNote(c)) {
-            player.noteOn(octave, Character.toString(c));
+        if (isNote(caractere)) {
+            player.noteOn(octave, Character.toString(caractere));
             wait = NOTE_DURATION_MS;
-        } else if (c == ' ') {
+        } else if (caractere == ' ') {
             doubleOrResetVolume();
-        } else if (c == '!') {
+        } else if (caractere == '!') {
             player.setInstrument(Instrument.AGOGO.getId());
-        } else if ("IOUiou".indexOf(c) != -1) {
+        } else if ("IOUiou".indexOf(caractere) != -1) {
             player.setInstrument(Instrument.HARPISCHORD.getId());
-        } else if (Character.isDigit(c)) {
+        } else if (Character.isDigit(caractere)) {
             int instrument = player.getInstrument();
-            instrument += Character.getNumericValue(c);
+            instrument += Character.getNumericValue(caractere);
             instrument %= 128;
             player.setInstrument(instrument);
-        } else if (c == '?' || c == '.') {
+        } else if (caractere == '?' || caractere == '.') {
             int newOctave = octave + 1;
             if (newOctave > MAX_OCTAVE) {
                 newOctave = DEFAULT_OCTAVE;
             }
             octave = newOctave;
-        } else if (c == '\n') {
+        } else if (caractere == '\n') {
             player.setInstrument(Instrument.TUBULAR_BELLS.getId());
-        } else if (c == ';') {
+        } else if (caractere == ';') {
             player.setInstrument(Instrument.PAN_FLUTE.getId());
-        } else if (c == ',') {
+        } else if (caractere == ',') {
             player.setInstrument(Instrument.CHURCH_ORGAN.getId());
         } else {
             if (lastNote != null) {
@@ -147,10 +147,10 @@ class Parser {
     }
 
     // Finaliza o processamento de um comando
-    private void finishCommand(char c) {
-        if (isNote(c)) {
-            player.noteOff(octave, Character.toString(c));
-            lastNote = c;
+    private void finishCommand(char caractere) {
+        if (isNote(caractere)) {
+            player.noteOff(octave, Character.toString(caractere));
+            lastNote = caractere;
         } else {
             if (lastNote != null) {
                 player.noteOff(octave, Character.toString(lastNote));
