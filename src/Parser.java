@@ -179,15 +179,20 @@ class Parser {
             Character d = getChar();
             while (d != null && Character.isDigit(d)) {
                 sb.append(d);
+                d = getChar();
+                System.out.println(d);
+            }
+            // Consumiu um caractere que não é dígito.
+            if (d != null) {
+                rewind(1);
             }
             String s = sb.toString();
-            int instrument;
             if (s.isEmpty()) {
-                instrument = 0;
+                cmd = new NopCommand(startpos, position);
             } else {
-                instrument = Integer.parseInt(s);
+                int instrument = Integer.parseInt(s);
+                cmd = new InstrumentCommand(startpos, position, instrument);
             }
-            cmd = new InstrumentCommand(startpos, position, instrument);
         } else {
             cmd = new NopCommand(startpos, position);
         }

@@ -18,7 +18,6 @@ abstract class Player {
 
     public void reset(String text) {
         octave = DEFAULT_OCTAVE;
-        // midi.reset();
         if (text != null) {
             parser = new Parser(text);
         } else {
